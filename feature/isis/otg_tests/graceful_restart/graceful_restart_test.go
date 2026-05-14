@@ -158,7 +158,11 @@ func configureDUT(t *testing.T, dut *ondatra.DUTDevice) {
 
 	for _, isisPort := range isisConf {
 		// Configure ISIS on DUT Port 1
-		intf := isis.GetOrCreateInterface(isisPort.port)
+		intName := isisPort.port
+		if deviations.InterfaceRefInterfaceIDFormat(dut) {
+			intName = isisPort.port + ".0"
+		}
+		intf := isis.GetOrCreateInterface(intName)
 		intf.CircuitType = oc.Isis_CircuitType_POINT_TO_POINT
 		intf.SetEnabled(true)
 		// Configure ISIS level at global mode if true else at interface mode
@@ -294,7 +298,7 @@ func verifyISISTelemetry(t *testing.T, dut *ondatra.DUTDevice, dutIntf []string)
 	t.Helper()
 	statePath := gnmi.OC().NetworkInstance(deviations.DefaultNetworkInstance(dut)).Protocol(oc.PolicyTypes_INSTALL_PROTOCOL_TYPE_ISIS, isisInstance).Isis()
 	for _, intfName := range dutIntf {
-		if deviations.ExplicitInterfaceInDefaultVRF(dut) {
+		if deviations.ExplicitInterfaceInDefaultVRF(dut) || deviations.InterfaceRefInterfaceIDFormat(dut) {
 			intfName = intfName + ".0"
 		}
 		nbrPath := statePath.Interface(intfName)
@@ -626,6 +630,5 @@ func testISISWithDUTRestart(t *testing.T, dut *ondatra.DUTDevice, ate *ondatra.A
 			t.Fatalf("Traffic verification failed. Traffic didn't pass within the graceful restart time : %v sec", gracefulRestartTime)
 		}
 	}
-
 	otgvalidationhelpers.ValidateOTGISISTelemetry(t, ate, expectedISISAdj)
 }
